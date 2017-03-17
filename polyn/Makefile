@@ -10,3 +10,5 @@ DEPS=$(patsubst %.c, $(DDIR)%.c, $(_DEPS))
 
 build: $(DEPS)
 	$(CC) -o polyn$(EXT) main.c $(DEPS) -I $(IDIR)
+
+all: build
