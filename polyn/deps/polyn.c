@@ -66,7 +66,7 @@ void createPolyn (Polyn* p, int m) {
     do {
         wrong = false;
         n = m;
-        printf("Input %d pairs of <p, e>:\n", m);
+        printf("Input %d pairs of <p, e> (strictly ordered by descending e):\n", m);
 
         initPolyn(p);
         current = *p;
@@ -159,9 +159,10 @@ double evalPolyn (Polyn p, double x) {
             result = p->element.p;
         } else {
             while (e-->p->element.e) result *= x;
+            e = p->element.e;
             result += p->element.p;
         }
-    while (e-->=0) result *= x;
+    while (e-->0) result *= x;
 
     return result;
 }
