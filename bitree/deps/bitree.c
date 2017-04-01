@@ -1,4 +1,5 @@
 #include "bitree.h"
+#include "ioutil.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,41 +21,59 @@ void _initBiTree (BiTree* T, char* input, int len) {
     if (len == 1) return;
     _initBiTree(&(*T)->lchild, input + 1, half);
     _initBiTree(&(*T)->rchild, input + 1 + half, half);
-    (*T)->lchild->parent = (*T)->rchild->parent = *T;
+    if ((*T)->lchild) (*T)->lchild->parent = *T;
+    if ((*T)->rchild) (*T)->rchild->parent = *T;
+}
+
+bool _validateBiTreeInput (char* input) {
+    int i = strlen(input);
+
+    if (!i || ((i + 1) & i) != 0) {
+        printf("Length error!\n");
+        return false;
+    }
+
+    return true;
 }
 
 void initBiTree (BiTree* T) {
-    char* input[MAX_NODES];
-    scanf("%s", input);
+    char input[MAX_NODES];
+
+    do {
+        scanf("%s", input);
+        digest();
+    } while (!_validateBiTreeInput(input));
+
     _initBiTree(T, input, strlen(input));
 }
 
-void destroyBiTree (BiTree T) {
-    if (!T) return;
-    destroyBiTree(T->lchild);
-    destroyBiTree(T->rchild);
-    free(T);
+void destroyBiTree (BiTree* T) {
+    if (!*T) return;
+    destroyBiTree(&(*T)->lchild);
+    destroyBiTree(&(*T)->rchild);
+    free(*T);
+    *T = NULL;
 }
 
 void preOrder (BiTree T, BiTreeCallback f) {
     if (!T) return;
     f(T);
-    preOrder(T->lchild);
-    preOrder(T->rchild);
+    preOrder(T->lchild, f);
+    preOrder(T->rchild, f);
 }
 
 void postOrder (BiTree T, BiTreeCallback f) {
     if (!T) return;
-    postOrder(T->lchild);
-    postOrder(T->rchild);
+    postOrder(T->lchild, f);
+    postOrder(T->rchild, f);
     f(T);
 }
 
 void inOrder (BiTree T, BiTreeCallback f) {
     if (!T) return;
-    inOrder(T->lchild);
+    inOrder(T->lchild, f);
     f(T);
-    inOrder(T->rchild);
+    inOrder(T->rchild, f);
 }
 
 int getHeight (BiTree T) {
@@ -84,8 +103,16 @@ void _printBiTree (BiTree T, int indent) {
     }
 
     printf("(%c", T->value);
-    _printBiTree(T->lchild, indent + 1);
-    _printBiTree(T->rchild, indent + 1);
+
+    if (T->lchild || T->rchild) {
+        println();
+        _printBiTree(T->lchild, indent + 1);
+        _printBiTree(T->rchild, indent + 1);
+
+        i = indent;
+        while (i--) printf("  ");
+    }
+
     printf(")\n");
 }
 
@@ -93,8 +120,8 @@ void printBiTree (BiTree T) {
     _printBiTree(T, 0);
 }
 
-void printBiNode (BiNode*) {
-    putchar(BiNode ? BiNode->value : '#');
+void printBiNode (BiNode* node) {
+    putchar(node ? node->value : '#');
 }
 
 void exchangeLeftRight (BiTree T) {
@@ -112,8 +139,11 @@ void copyBiTree (BiTree src, BiTree* dest) {
     *dest = (BiTree) calloc(1, sizeof(BiNode));
     (*dest)->value = src->value;
     copyBiTree(src->lchild, &(*dest)->lchild);
-    copyBiTree(src->rchild, &(*dest)->rchild)
-    (*dest)->lchild->parent = (*dest)->rchild->parent = *dest;
+    copyBiTree(src->rchild, &(*dest)->rchild);
+    if ((*dest)->lchild)
+        (*dest)->lchild->parent = *dest;
+    if ((*dest)->rchild)
+        (*dest)->rchild->parent = *dest;
 }
 
 bool isSortTree (BiTree T) {
@@ -130,7 +160,10 @@ bool _isBalanceTree (BiTree T, int* h) {
     }
 
     int lh, rh;
-    return _isBalanceTree(T->lchild, &lh) && _isBalanceTree(T->rchild, &rh) && abs(lh - rh) <= 1;
+    if (!(_isBalanceTree(T->lchild, &lh) && _isBalanceTree(T->rchild, &rh))) return false;
+
+    *h = (lh > rh ? lh : rh) + 1;
+    return abs(lh - rh) <= 1;
 }
 
 bool isBalanceTree (BiTree T) {
@@ -141,7 +174,7 @@ bool isBalanceTree (BiTree T) {
 bool isCompleteTree (BiTree T) {
     if (!T) return true;
     BiNode *Q[MAX_NODES], *node;
-    int head = 0; tail = 1; Q[1] = T;
+    int head = 0, tail = 1; Q[1] = T;
     bool emptyAppeared = false;
 
     while (head != tail) {
@@ -163,7 +196,7 @@ bool isCompleteTree (BiTree T) {
 void traverseByLayer (BiTree T, BiTreeCallback f) {
     if (!T) return;
     BiNode *Q[10000], *node;
-    int head = 0; tail = 1; Q[1] = T;
+    int head = 0, tail = 1; Q[1] = T;
 
     while (head != tail) {
         next(head);
@@ -174,4 +207,68 @@ void traverseByLayer (BiTree T, BiTreeCallback f) {
         if (node->rchild)
             Q[next(tail)] = node->rchild;
     }
+}
+
+BiNode* searchNode (BiTree T, char key) {
+    if (!T) return NULL;
+
+    BiNode* node;
+
+    if (T->value == key)
+        return T;
+    else if (!(node = searchNode(T->lchild, key)))
+        node = searchNode(T->rchild, key);
+
+    return node;
+}
+
+void _replaceNode (BiNode* node, BiNode* toReplace) {
+    if (!node) return;
+    BiNode* parent = node->parent;
+
+    if (parent) {
+        if (parent->lchild == node) parent->lchild = toReplace; else parent->rchild = toReplace;
+    }
+
+    if (toReplace) toReplace->parent = parent;
+
+    destroyBiTree(&node);
+
+}
+
+void deleteNode (BiNode** node) {
+    _replaceNode(*node, NULL);
+    *node = NULL;
+}
+
+void insertBiTree (BiNode** toBeReplaced, BiTree toInsert) {
+    _replaceNode(*toBeReplaced, toInsert);
+    *toBeReplaced = toInsert;
+}
+
+void _printNodeDetails (BiNode* node) {
+    if (!node)
+        printf("Empty node.\n");
+    else
+        printf("Node value: %c\n", node->value);
+}
+
+void printNodeDetails (BiNode* node) {
+    println();
+    _printNodeDetails(node);
+    if (!node) return;
+
+    printf("Parent: ");
+    _printNodeDetails(node->parent);
+    printf("Left child: ");
+    _printNodeDetails(node->lchild);
+    printf("Right child: ");
+    _printNodeDetails(node->rchild);
+}
+
+void searchNodes (BiTree T, char key, BiTreeCallback f) {
+    if (!T) return;
+    if (T->value == key) f(T);
+    searchNodes(T->lchild, key, f);
+    searchNodes(T->rchild, key, f);
 }
