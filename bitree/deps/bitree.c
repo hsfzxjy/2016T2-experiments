@@ -8,6 +8,9 @@
 #define MAX_NODES 20000
 #define next(var) (var = (var + 1) % MAX_NODES)
 
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+
 void _initBiTree (BiTree* T, char* input, int len) {
     if (*input == '#') {
         *T = NULL;
@@ -146,11 +149,31 @@ void copyBiTree (BiTree src, BiTree* dest) {
         (*dest)->rchild->parent = *dest;
 }
 
-bool isSortTree (BiTree T) {
+bool _isSortTree (BiTree T, char* min, char* max) {
     if (!T) return true;
 
-    bool result = (!T->lchild || T->lchild->value <= T->value) && (!T->rchild || T->rchild->value >= T->value);
-    return result && isSortTree(T->lchild) && isSortTree(T->rchild);
+    *min = *max = T->value;
+    char tmin, tmax;
+    bool result = true;
+
+    if (T->lchild) {
+        result = _isSortTree(T->lchild, &tmin, &tmax) && tmax <= T->value;
+        *min = MIN(*min, tmin);
+        *max = MAX(*max, tmax);
+    }
+
+    if (T->rchild) {
+        result = result && _isSortTree(T->rchild, &tmin, &tmax) && tmin >= T->value;
+        *min = MIN(*min, tmin);
+        *max = MAX(*max, tmax);
+    }
+
+    return result;
+}
+
+bool isSortTree (BiTree T) {
+    char tmin, tmax;
+    return _isSortTree(T, &tmin, &tmax);
 }
 
 bool _isBalanceTree (BiTree T, int* h) {
