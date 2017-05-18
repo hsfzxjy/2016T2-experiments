@@ -6,8 +6,6 @@
 
 typedef void (*Operation)();
 
-#define ITEMS_N 10
-
 const char* mainMenu =
     "==== MENU ====\n"
     "0) create\n"
@@ -141,9 +139,11 @@ void opExit () {
     exit(0);
 }
 
-Operation operations[ITEMS_N] = {
+Operation operations[] = {
     opCreate, opAdd, opSubstract, opPrint, opEval, opDiff, opInt, opMul, opDiv, opExit
 };
+
+const int ITEMS_N = sizeof(operations) / sizeof(Operation);
 
 int main () {
     while (1) {
